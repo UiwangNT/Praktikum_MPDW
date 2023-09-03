@@ -1,2 +1,83 @@
-ahvdysdy
-sbjsbjs
+---
+title: "Tugas Praktikum 1"
+author: "Uiwang Nur Thoriq"
+date: "2023-09-03"
+output: html_document
+---
+```{r}
+library(forecast)
+library(graphics)
+library(TTR)
+library(TSA)
+library(rio)
+library(ggplot2)
+
+datampdw <- import("https://raw.githubusercontent.com/UiwangNT/Praktikum_MPDW/main/data/US_inflation_rates_csv.csv")
+datampdw<-datampdw[,1:3]
+View(datampdw)
+str(datampdw)
+dim(datampdw)
+datampdw.ts <- ts(datampdw$`value  (indeks harga konsumen)`)
+summary(datampdw.ts)
+ts.plot(datampdw.ts, xlab="Time Period", ylab="Consumer Price Index", 
+        main = "US's Consumer Price Index Plot")
+points(datampdw.ts)
+
+
+training<-datampdw[1:734,]
+testing<-datampdw[735:917,]
+train.ts <- ts(training$`value  (indeks harga konsumen)`)
+test.ts <- ts(testing$`value  (indeks harga konsumen)`)
+
+plot(datampdw.ts, col="black",main="Plot semua data")
+
+
+plot(train.ts, col="red",main="Plot data latih")
+
+
+plot(test.ts,col="blue",main="Plot data uji")
+
+ggplot() + 
+  geom_line(data = training, aes(x = `Periode ke-`, y = `value  (indeks harga konsumen)`, col = "Data Latih")) +
+  geom_line(data = testing, aes(x = `Periode ke-`, y = `value  (indeks harga konsumen)`, col = "Data Uji")) +
+  labs(x = "Periode Waktu", y = "IHK", color = "Legend") +
+  scale_colour_manual(name="Keterangan:", breaks = c("Data Latih", "Data Uji"),
+                      values = c("blue", "red")) + 
+  theme_bw() + theme(legend.position = "bottom",
+                     plot.caption = element_text(hjust=0.5, size=12))
+
+#Lamda=0.2 dan gamma=0.2
+des.1<- HoltWinters(train.ts, gamma = FALSE, beta = 0.2, alpha = 0.2)
+plot(des.1)
+
+#ramalan
+ramalandes1<- forecast(des.1, h=10)
+ramalandes1
+
+#Lamda=0.6 dan gamma=0.3
+des.2<- HoltWinters(train.ts, gamma = FALSE, beta = 0.3, alpha = 0.6)
+plot(des.2)
+
+#ramalan
+ramalandes2<- forecast(des.2, h=10)
+ramalandes2
+
+
+plot(datampdw.ts)
+lines(des.1$fitted[,1], lty=2, col="blue")
+lines(ramalandes1$mean, col="red")
+
+```
+
+```{r}
+#Lamda dan gamma optimum
+des.opt<- HoltWinters(train.ts, gamma = FALSE)
+des.opt
+plot(des.opt)
+
+#ramalan
+ramalandesopt<- forecast(des.opt, h=10)
+ramalandesopt
+```
+
+
