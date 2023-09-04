@@ -74,7 +74,6 @@ ggplot() +
 #Single Moving Average (SMA)
 Melakukan pemulusan dan peramalan dengan metode SMA
 ```{r}
-
 #Pemulusan dengan SMA
 data.sma<-SMA(train.ts,n=30)
 data.sma
@@ -89,7 +88,7 @@ data.gab
 
 ```
 
-#Plot deret waktuu peramalan dengan SMA
+#Plot deret waktu peramalan dengan SMA
 ```{r}
 ts.plot(datampdw.ts, xlab="Time Period ", ylab="IHK", main= "SMA N=30 IHK")
 points(datampdw.ts)
@@ -100,7 +99,7 @@ legend("topleft",c("data aktual","data pemulusan","data peramalan"), lty=8, col=
 ```
 
 
-#Menghitung keakuratan data training
+#Menghitung keakuratan data training SMA
 ```{r}
 #Menghitung nilai keakuratan data latih
 error_train.sma = train.ts-data.ramal[1:length(train.ts)]
@@ -116,7 +115,7 @@ akurasi_train.sma
 ```
 Berdasarkan hasil perhitungan akurasi data latih menggunakan m=30 dengan metode SMA menghasilkan nilai MAPE yang kurang dari 10% sehingga nilai akurasi ini dapat dikategorikan sebagai sangat baik.
 
-#Menghitung keakuratan data testing
+#Menghitung keakuratan data testing SMA
 ```{r}
 error_test.sma = test.ts-data.gab[736:918,3]
 SSE_test.sma = sum(error_test.sma^2)
@@ -159,7 +158,7 @@ lines(data.gab2[,6],col="red",lwd=2)
 legend("topleft",c("data aktual","data pemulusan","data peramalan"), lty=8, col=c("black","green","red"), cex=0.8)
 ```
 
-#Perhitungan akurasi data training
+#Perhitungan akurasi data training DMA
 ```{r}
 error_train.dma = train.ts-data.ramal2[1:length(train.ts)]
 SSE_train.dma = sum(error_train.dma[60:length(train.ts)]^2)
@@ -173,7 +172,7 @@ akurasi_train.dma
 ```
 Berdasarkan hasil perhitungan akurasi data training menggunakan m=30 dengan metode DMA menghasilkan nilai MAPE yang kurang dari 10% sehingga nilai akurasi ini dapat dikategorikan sebagai sangat baik.
 
-#Perhitungan akurasi data testing
+#Perhitungan akurasi data testing DMA
 ```{r}
 error_test.dma = test.ts-data.gab2[736:918,6]
 SSE_test.dma = sum(error_test.dma^2)
@@ -187,5 +186,284 @@ akurasi_test.dma
 ```
 Berdasarkan hasil perhitungan akurasi data testing menggunakan m=30 dengan metode DMA menghasilkan nilai MAPE yang kurang dari 10% sehingga nilai akurasi ini dapat dikategorikan sebagai sangat baik.
 
-Setelah pengujian menggunakan berbagai nilai m, yaitu 4, 10, 20, dan 30 diperoleh hasil bahwa dengan menggunakan m=30 didapatkan bahwa pada data berbentuk trend yang digunakan, metode DMA lebih baik digunakan daripada metode SMA.
+#Perbandingan SMA dengan DMA
+```{r}
+MSEpenuh <- cbind(akurasi_test.sma,akurasi_test.dma)
+colnames(MSEpenuh)<-c("sma","dma")
+MSEpenuh
+```
+Setelah pengujian menggunakan berbagai nilai m, yaitu 4, 10, 20, dan 30 pada data yang digunakan, menghasilkan perbandingan kedua metode dengan ukuran akurasi MSE. Berdasarkan hasil yang diperoleh pada nilai m=30 dapat disimpulkan bahwa pada data dengan pola tren yang digunakan, pemulusan dengan metode SMA lebih sesuai dari SMA karena menghasilkan nilai MSE yang jauh lebih kecil.
 
+
+#Metode pemulusan dengan eksponensial ganda (DES)
+Selain pemulusan dengan DMA (Double Moving Average), data yang memiliki pola trend dapat juga melalui pemulusan dengan pemulusan eksponensial  ganda. Pemulusan DES menggunakan Holtwinters. Gamma adalah parameter pemulusan untuk komponen musiman, Beta adalah parameter pemulusan untuk tren, dan Alpha adalah parameter pemulusan untuk stasioner, serta h adalah banyaknya periode yang akan diramalkan. Pada DES, nilai Alpha diinisiasi bersama dengan Beta.
+
+#Percobaan nilai Alpha dan Beta
+```{r}
+#Alpha =0.2 dan beta = 0.2
+des.1<- HoltWinters(train.ts, gamma = FALSE, beta = 0.2, alpha = 0.2)
+plot(des.1)
+#ramalan 183 periode ke depan
+ramalandes1<- forecast(des.1,183)
+ramalandes1
+
+#Alpha =0.6 dan beta = 0.3
+des.2<- HoltWinters(train.ts, gamma = FALSE, beta = 0.3, alpha = 0.6)
+plot(des.2)
+#ramalan 183 periode ke depan
+ramalandes2<- forecast(des.2,183)
+ramalandes2
+```
+
+#Mencari nilai Alpha dan Beta optimum
+```{r}
+des.opt<- HoltWinters(train.ts, gamma = FALSE)
+des.opt
+plot(des.opt)
+#ramalan 183 periode ke depan
+ramalandesopt<- forecast(des.opt, h=183)
+ramalandesopt
+```
+
+
+#Membuat plot pemulusan
+```{r}
+plot(datampdw.ts)
+lines(des.1$fitted[,1], lty=2, col="blue")
+lines(ramalandes1$mean, col="red")
+
+plot(datampdw.ts)
+lines(des.2$fitted[,1], lty=2, col="blue")
+lines(ramalandes2$mean, col="red")
+
+plot(datampdw.ts)
+lines(des.opt$fitted[,1], lty=2, col="blue")
+lines(ramalandesopt$mean, col="red")
+```
+
+#Menghitung akurasi data training pada DES
+```{r}
+#Akurasi Data Training
+ssedes.train1<-des.1$SSE
+msedes.train1<-ssedes.train1/length(train.ts)
+sisaandes1<-ramalandes1$residuals
+head(sisaandes1)
+
+mapedes.train1 <- sum(abs(sisaandes1[3:length(train.ts)]/train.ts[3:length(train.ts)])
+                      *100)/length(train.ts)
+
+akurasides.1 <- matrix(c(ssedes.train1,msedes.train1,mapedes.train1))
+row.names(akurasides.1)<- c("SSE", "MSE", "MAPE")
+colnames(akurasides.1) <- c("Akurasi lamda=0.2 dan gamma=0.2")
+akurasides.1
+
+ssedes.train2<-des.2$SSE
+msedes.train2<-ssedes.train2/length(train.ts)
+sisaandes2<-ramalandes2$residuals
+head(sisaandes2)
+
+mapedes.train2 <- sum(abs(sisaandes2[3:length(train.ts)]/train.ts[3:length(train.ts)])
+                      *100)/length(train.ts)
+
+akurasides.2 <- matrix(c(ssedes.train2,msedes.train2,mapedes.train2))
+row.names(akurasides.2)<- c("SSE", "MSE", "MAPE")
+colnames(akurasides.2) <- c("Akurasi lamda=0.6 dan gamma=0.3")
+akurasides.2
+
+ssedes.trainopt<-des.opt$SSE
+msedes.trainopt<-ssedes.trainopt/length(train.ts)
+sisaandesopt<-ramalandesopt$residuals
+head(sisaandesopt)
+
+mapedes.trainopt <- sum(abs(sisaandesopt[3:length(train.ts)]/train.ts[3:length(train.ts)])
+                      *100)/length(train.ts)
+
+akurasides.opt <- matrix(c(ssedes.trainopt,msedes.trainopt,mapedes.trainopt))
+row.names(akurasides.opt)<- c("SSE", "MSE", "MAPE")
+colnames(akurasides.opt) <- c("Akurasi Alpha dan Beta optimum")
+akurasides.opt
+```
+
+Pada pemulusan dengan DES di data train atau data latih, ketiga nilai Alpha dan Beta yang dicobakan memberikan hasil nilai MAPE yang kurang dari 10%, sehingga dapat dikategorikan sangat baik. Dari ketiga percobaan nilai alpha dan beta, nilai alpha dan beta yang dicari pada kondisi optimum memberikan nilai MAPE dan MSE yang paling kecil.
+
+#Menghitung akurasi data test pada DES
+```{r}
+selisihdes1<-ramalandes1$mean-testing$`value  (indeks harga konsumen)`
+selisihdes1
+
+SSEtestingdes1<-sum(selisihdes1^2)
+MSEtestingdes1<-SSEtestingdes1/length(testing$`value  (indeks harga konsumen)`)
+MAPEtestingdes1<-sum(abs(selisihdes1/testing$`value  (indeks harga konsumen)`)*100)/length(testing$`value  (indeks harga konsumen)`)
+
+selisihdes2<-ramalandes2$mean-testing$`value  (indeks harga konsumen)`
+selisihdes2
+
+SSEtestingdes2<-sum(selisihdes2^2)
+MSEtestingdes2<-SSEtestingdes2/length(testing$`value  (indeks harga konsumen)`)
+MAPEtestingdes2<-sum(abs(selisihdes2/testing$`value  (indeks harga konsumen)`)*100)/length(testing$`value  (indeks harga konsumen)`)
+
+selisihdesopt<-ramalandesopt$mean-testing$`value  (indeks harga konsumen)`
+selisihdesopt
+
+SSEtestingdesopt<-sum(selisihdesopt^2)
+MSEtestingdesopt<-SSEtestingdesopt/length(testing$`value  (indeks harga konsumen)`)
+MAPEtestingdesopt<-sum(abs(selisihdesopt/testing$`value  (indeks harga konsumen)`)*100)/length(testing$`value  (indeks harga konsumen)`)
+
+akurasitestingdes <-
+  matrix(c(SSEtestingdes1,MSEtestingdes1,MAPEtestingdes1,SSEtestingdes2,MSEtestingdes2,
+           MAPEtestingdes2,SSEtestingdesopt,MSEtestingdesopt,MAPEtestingdesopt),
+         nrow=3,ncol=3)
+row.names(akurasitestingdes)<- c("SSE", "MSE", "MAPE")
+colnames(akurasitestingdes) <- c("des ske1","des ske2","des opt")
+akurasitestingdes
+```
+Pada pemulusan dengan DES di data test atau data uji, ketiga nilai Alpha dan Beta yang dicobakan memberikan hasil nilai MAPE yang lebih dari 10%. Dari ketiga percobaan nilai alpha dan beta, nilai alpha dan beta yang dicari pada kondisi optimum memberikan nilai MAPE dan MSE yang paling kecil.
+
+#Melakukan metode SES untuk dibandingkan dengan DES
+Selanjutnya akan dilakukan metode pemulusan SES untuk membandingkan dengan metode pemulusan DES
+```{r}
+#Pemulusan SES dengan fungsi ses
+#Nilai Alpha atau lamda disamakan dengan DES
+ses.1 <- ses(train.ts, h = 183, alpha = 0.2)
+plot(ses.1)
+ses.1
+
+ses.2<- ses(train.ts, h = 183, alpha = 0.6)
+plot(ses.2)
+ses.2
+
+autoplot(ses.1) +
+  autolayer(fitted(ses.1), series="Fitted") +
+  ylab("IHK") + xlab("Periode")
+autoplot(ses.2) +
+  autolayer(fitted(ses.2), series="Fitted") +
+  ylab("IHK") + xlab("Periode")
+```
+
+#Pemulusan SES dengan HoltWinter
+```{r}
+ses1<- HoltWinters(train.ts, gamma = FALSE, beta = FALSE, alpha = 0.2)
+plot(ses1)
+#ramalan 183 periode ke depan
+ramalan1<- forecast(ses1, h=183)
+ramalan1
+
+ses2<- HoltWinters(train.ts, gamma = FALSE, beta = FALSE, alpha = 0.6)
+plot(ses2)
+#ramalan 183 periode ke depan
+ramalan2<- forecast(ses2, h=183)
+ramalan2
+
+```
+
+#Mencari nilai Alpha optimum
+```{r}
+ses.opt <- ses(train.ts, h = 183, alpha = NULL)
+ses.opt
+plot(ses.opt)
+
+#Alpha optimum dengan Holt Winter
+sesopt<- HoltWinters(train.ts, gamma = FALSE, beta = FALSE,alpha = NULL)
+sesopt
+plot(sesopt)
+#ramalan 183 periode ke depan
+ramalanopt<- forecast(sesopt, h=183)
+ramalanopt
+```
+
+#Menghitung akurasi pada data train atau data latih pada SES
+```{r}
+fitted1<-ramalan1$fitted
+sisaan1<-ramalan1$residuals
+head(sisaan1)
+resid1<-training$`value  (indeks harga konsumen)`-ramalan1$fitted
+head(resid1)
+
+SSE.1=sum(sisaan1[2:length(train.ts)]^2)
+SSE.1
+MSE.1 = SSE.1/length(train.ts)
+MSE.1
+MAPE.1 = sum(abs(sisaan1[2:length(train.ts)]/train.ts[2:length(train.ts)])*
+               100)/length(train.ts)
+MAPE.1
+
+akurasi.1 <- matrix(c(SSE.1,MSE.1,MAPE.1))
+row.names(akurasi.1)<- c("SSE", "MSE", "MAPE")
+colnames(akurasi.1) <- c("Akurasi lamda=0.2")
+akurasi.1
+
+fitted2<-ramalan2$fitted
+sisaan2<-ramalan2$residuals
+head(sisaan2)
+resid2<-training$`value  (indeks harga konsumen)`-ramalan2$fitted
+head(resid2)
+
+SSE.2=sum(sisaan2[2:length(train.ts)]^2)
+SSE.2
+MSE.2 = SSE.2/length(train.ts)
+MSE.2
+MAPE.2 = sum(abs(sisaan2[2:length(train.ts)]/train.ts[2:length(train.ts)])*
+               100)/length(train.ts)
+MAPE.2
+
+akurasi.2 <- matrix(c(SSE.2,MSE.2,MAPE.2))
+row.names(akurasi.2)<- c("SSE", "MSE", "MAPE")
+colnames(akurasi.2) <- c("Akurasi lamda=0.6")
+akurasi.2
+
+fittedopt<-ramalanopt$fitted
+sisaanopt<-ramalanopt$residuals
+head(sisaanopt)
+residopt<-training$`value  (indeks harga konsumen)`-ramalanopt$fitted
+head(residopt)
+
+SSE.opt=sum(sisaanopt[2:length(train.ts)]^2)
+SSE.opt
+MSE.opt = SSE.opt/length(train.ts)
+MSE.opt
+MAPE.opt = sum(abs(sisaanopt[2:length(train.ts)]/train.ts[2:length(train.ts)])*
+               100)/length(train.ts)
+MAPE.opt
+
+akurasi.opt <- matrix(c(SSE.opt,MSE.opt,MAPE.opt))
+row.names(akurasi.opt)<- c("SSE", "MSE", "MAPE")
+colnames(akurasi.opt) <- c("Akurasi lamda optimum")
+akurasi.opt
+```
+
+#Menghitung akurasi data test pada SES
+```{r}
+selisih1<-ramalan1$mean-testing$`value  (indeks harga konsumen)`
+SSEtesting1<-sum(selisih1^2)
+MSEtesting1<-SSEtesting1/length(testing)
+
+selisih2<-ramalan2$mean-testing$`value  (indeks harga konsumen)`
+SSEtesting2<-sum(selisih2^2)
+MSEtesting2<-SSEtesting2/length(testing)
+
+selisihopt<-ramalanopt$mean-testing$`value  (indeks harga konsumen)`
+SSEtestingopt<-sum(selisihopt^2)
+MSEtestingopt<-SSEtestingopt/length(testing)
+
+akurasitesting1 <- matrix(c(SSEtesting1,SSEtesting2,SSEtestingopt))
+row.names(akurasitesting1)<- c("SSE1", "SSE2", "SSEopt")
+akurasitesting1
+
+akurasitesting2 <- matrix(c(MSEtesting1,MSEtesting2,MSEtestingopt))
+row.names(akurasitesting2)<- c("MSE1", "MSE2", "MSEopt")
+akurasitesting2
+```
+#Membandingkan hasil akurasi SES dengan DES
+```{r}
+MSEfull <-
+  matrix(c(MSEtesting1,MSEtesting2,MSEtestingopt,MSEtestingdes1,MSEtestingdes2,
+           MSEtestingdesopt),nrow=3,ncol=2)
+row.names(MSEfull)<- c("nilai 1", "nilai 2", "nilai opt")
+colnames(MSEfull) <- c("ses","des")
+MSEfull
+```
+
+Metode SES dan DES dapat dibandingkan menggunakan ukuran akurasi yang sama. Pada data yang digunakan, menghasilkan perbandingan kedua metode dengan ukuran akurasi MSE. Berdasarkan hasil yang diperoleh dapat disimpulkan bahwa pada data dengan pola tren yang digunakan, pemulusan dengan metode DES lebih sesuai dari SES karena menghasilkan nilai MSE yang jauh lebih kecil.
+
+#Kesimpulan
+Pada data trend yang digunakan, metode DMA dan DES menghasilkan pemulusan yang paling baik dibandingkan pemulusan dengan metode SMA atau SES karena metode DMA menghasilkan nilai MSE lebih kecil dari SMA dan DES menghasilkan MSE lbih kecil dari SES. Pemulusan metode Winter tidak dilakukan karena data memiliki pola yang cenderung terus naik dan tidak terdeteksi adanya faktor seasonal secara eksploratif.
