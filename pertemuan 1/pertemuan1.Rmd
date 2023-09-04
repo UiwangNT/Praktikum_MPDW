@@ -5,7 +5,7 @@ date: "2023-09-03"
 output: html_document
 ---
 
-#Input Data dan memanggil package
+#Import Data dan memanggil package
 ```{r}
 library(forecast)
 library(graphics)
@@ -16,5 +16,176 @@ library(ggplot2)
 
 datampdw <- import("https://raw.githubusercontent.com/UiwangNT/Praktikum_MPDW/main/data/US_inflation_rates_csv.csv")
 datampdw<-datampdw[,1:3]
+datampdw
 View(datampdw)
 ```
+
+#Eksplorasi Data
+Melihat struktur dan dimensi data
+```{r}
+str(datampdw)
+dim(datampdw)
+```
+
+#Mengubah data sesuai deret waktu dan menampilkan plot
+```{r}
+datampdw.ts <- ts(datampdw$`value  (indeks harga konsumen)`)
+summary(datampdw.ts)
+
+ts.plot(datampdw.ts, xlab="Time Period ", ylab="Indeks Harga Konsumen", 
+        main = "Plot Time Series")
+points(datampdw.ts)
+```
+
+#Single Moving Average & Double Moving Average
+Data pada plot menggambarkan pola data trend naik yang berarti akan cocok menggunakan pemulusan dengan Double Moving Average (DMA). Karena proses DMA melalui proses SMA, maka akan dibandingkan juga hasil SMA dengan DMA.
+```{r}
+training <- datampdw[1:735,]
+testing <- datampdw[736:918,]
+train.ts <- ts(training$`value  (indeks harga konsumen)`)
+test.ts <- ts(testing$`value  (indeks harga konsumen)`)
+```
+
+#Ekplorasi terhadap ketiga data
+```{r}
+#eksplorasi keseluruhan data
+plot(datampdw.ts, col="red",main="Plot semua data")
+points(datampdw.ts)
+
+#eksplorasi data latih
+plot(train.ts, col="blue",main="Plot data train")
+points(train.ts)
+
+#eksplorasi data uji
+plot(test.ts, col="green",main="Plot data test")
+points(test.ts)
+
+
+ggplot() + 
+  geom_line(data = training, aes(x= `Periode ke-`, y = `value  (indeks harga konsumen)` , col = "Data Train")) +
+  geom_line(data = testing, aes(x = `Periode ke-`, y = `value  (indeks harga konsumen)` , col = "Data Test")) +
+  labs(x = "Periode Waktu", y = "IHK", color = "Legend") +
+  scale_colour_manual(name="Keterangan:", breaks = c("Data Train", "Data Test"),
+                      values = c("blue", "red")) + 
+  theme_bw() + theme(legend.position = "bottom",
+                     plot.caption = element_text(hjust=0.5, size=12))
+
+```
+#Single Moving Average (SMA)
+Melakukan pemulusan dan peramalan dengan metode SMA
+```{r}
+
+#Pemulusan dengan SMA
+data.sma<-SMA(train.ts,n=30)
+data.sma
+
+#Peramalan 1 periode ke depan
+data.ramal<-c(NA,data.sma)
+data.ramal
+
+#Peramalan 183 periode ke depan
+data.gab<-cbind(aktual=c(train.ts,rep(NA,183)),pemulusan=c(data.sma,rep(NA,183)),ramalan=c(data.ramal,rep(data.ramal[length(data.ramal)],182)))
+data.gab
+
+```
+
+#Plot deret waktuu peramalan dengan SMA
+```{r}
+ts.plot(datampdw.ts, xlab="Time Period ", ylab="IHK", main= "SMA N=30 IHK")
+points(datampdw.ts)
+lines(data.gab[,2],col="green",lwd=2)
+lines(data.gab[,3],col="red",lwd=2)
+legend("topleft",c("data aktual","data pemulusan","data peramalan"), lty=8, col=c("black","green","red"), cex=0.5)
+
+```
+
+
+#Menghitung keakuratan data training
+```{r}
+#Menghitung nilai keakuratan data latih
+error_train.sma = train.ts-data.ramal[1:length(train.ts)]
+SSE_train.sma = sum(error_train.sma[31:length(train.ts)]^2)
+MSE_train.sma = mean(error_train.sma[31:length(train.ts)]^2)
+MAPE_train.sma = mean(abs((error_train.sma[31:length(train.ts)]/train.ts[31:length(train.ts)])*100))
+
+akurasi_train.sma <- matrix(c(SSE_train.sma, MSE_train.sma, MAPE_train.sma))
+row.names(akurasi_train.sma)<- c("SSE", "MSE", "MAPE")
+colnames(akurasi_train.sma) <- c("Akurasi m = 30")
+akurasi_train.sma
+
+```
+Berdasarkan hasil perhitungan akurasi data latih menggunakan m=30 dengan metode SMA menghasilkan nilai MAPE yang kurang dari 10% sehingga nilai akurasi ini dapat dikategorikan sebagai sangat baik.
+
+#Menghitung keakuratan data testing
+```{r}
+error_test.sma = test.ts-data.gab[736:918,3]
+SSE_test.sma = sum(error_test.sma^2)
+MSE_test.sma = mean(error_test.sma^2)
+MAPE_test.sma = mean(abs((error_test.sma/test.ts*100)))
+
+akurasi_test.sma <- matrix(c(SSE_test.sma, MSE_test.sma, MAPE_test.sma))
+row.names(akurasi_test.sma)<- c("SSE", "MSE", "MAPE")
+colnames(akurasi_test.sma) <- c("Akurasi m = 30")
+akurasi_test.sma
+
+```
+Berdasarkan hasil perhitungan akurasi data uji menggunakan m=30 dengan metode SMA menghasilkan nilai MAPE yang lebih dari 10% sehingga nilai akurasi ini dapat dikategorikan sebagai kurang baik.
+
+#Double Moving Average (DMA)
+```{r}
+dma <- SMA(data.sma, n = 30)
+At <- 2*data.sma - dma
+Bt <- 2/(30-1)*(data.sma - dma)
+data.dma<- At+Bt
+data.ramal2<- c(NA, data.dma)
+
+t = 1:183
+f = c()
+
+for (i in t) {
+  f[i] = At[length(At)] + Bt[length(Bt)]*(i)
+}
+
+data.gab2 <- cbind(aktual = c(train.ts,rep(NA,183)), pemulusan1 = c(data.sma,rep(NA,183)),pemulusan2 = c(data.dma, rep(NA,183)),At = c(At, rep(NA,183)), Bt = c(Bt,rep(NA,183)),ramalan = c(data.ramal2, f[-1]))
+data.gab2
+
+```
+#Visualisasi hasil pemulusan
+```{r}
+ts.plot(datampdw.ts, xlab="Time Period ", ylab="IHK", main= "DMA N=30 IHK")
+points(datampdw.ts)
+lines(data.gab2[,3],col="green",lwd=2)
+lines(data.gab2[,6],col="red",lwd=2)
+legend("topleft",c("data aktual","data pemulusan","data peramalan"), lty=8, col=c("black","green","red"), cex=0.8)
+```
+
+#Perhitungan akurasi data training
+```{r}
+error_train.dma = train.ts-data.ramal2[1:length(train.ts)]
+SSE_train.dma = sum(error_train.dma[60:length(train.ts)]^2)
+MSE_train.dma = mean(error_train.dma[60:length(train.ts)]^2)
+MAPE_train.dma = mean(abs((error_train.dma[60:length(train.ts)]/train.ts[60:length(train.ts)])*100))
+
+akurasi_train.dma <- matrix(c(SSE_train.dma, MSE_train.dma, MAPE_train.dma))
+row.names(akurasi_train.dma)<- c("SSE", "MSE", "MAPE")
+colnames(akurasi_train.dma) <- c("Akurasi m = 30")
+akurasi_train.dma
+```
+Berdasarkan hasil perhitungan akurasi data training menggunakan m=30 dengan metode DMA menghasilkan nilai MAPE yang kurang dari 10% sehingga nilai akurasi ini dapat dikategorikan sebagai sangat baik.
+
+#Perhitungan akurasi data testing
+```{r}
+error_test.dma = test.ts-data.gab2[736:918,6]
+SSE_test.dma = sum(error_test.dma^2)
+MSE_test.dma = mean(error_test.dma^2)
+MAPE_test.dma = mean(abs((error_test.dma/test.ts*100)))
+
+akurasi_test.dma <- matrix(c(SSE_test.dma, MSE_test.dma, MAPE_test.dma))
+row.names(akurasi_test.dma)<- c("SSE", "MSE", "MAPE")
+colnames(akurasi_test.dma) <- c("Akurasi m = 30")
+akurasi_test.dma
+```
+Berdasarkan hasil perhitungan akurasi data testing menggunakan m=30 dengan metode DMA menghasilkan nilai MAPE yang kurang dari 10% sehingga nilai akurasi ini dapat dikategorikan sebagai sangat baik.
+
+Setelah pengujian menggunakan berbagai nilai m, yaitu 4, 10, 20, dan 30 diperoleh hasil bahwa dengan menggunakan m=30 didapatkan bahwa pada data berbentuk trend yang digunakan, metode DMA lebih baik digunakan daripada metode SMA.
+
