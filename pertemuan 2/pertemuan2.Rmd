@@ -279,6 +279,6 @@ akurasi
 Dari perbandingan akurasi didapatkan nilai SSE pada penanganan dengan Cochrane-Orcutt lebih kecil daripada SSE dengan Hidreth-Lu. Namun keduanya tidak berbeda jauh dan keduanya menghasilkan nilai SSE yang lebih kecil dari model awal.
 
 #Simpulan
-Pada pemodelan peubah respon AQI dengan peubah penjelas CO,O3,SO2,dan PM25 terdeteksi adanya autokorelasi sehingga perlu penanganan untuk autokorelasi. Dari 2 penanganan yang dilakukan, SSE pada Cochrane-Orcutt lebih kecil daripada SSE dengan Hidreth-Lu. Namun keduanya tidak berbeda jauh dan keduanya menghasilkan nilai SSE yang lebih kecil dari model awal.
+Pada pemodelan peubah respon AQI dengan peubah penjelas CO,O3,SO2,dan PM25 terdeteksi adanya autokorelasi sehingga perlu penanganan untuk autokorelasi. Dari 2 penanganan yang dilakukan, SSE pada Cochrane-Orcutt lebih kecil daripada SSE dengan Hidreth-Lu. Namun keduanya tidak berbeda jauh dan keduanya menghasilkan nilai SSE yang lebih kecil dari pemodelan awal.
 
 
