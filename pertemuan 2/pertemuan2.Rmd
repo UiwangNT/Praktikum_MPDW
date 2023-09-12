@@ -1,1 +1,284 @@
+---
+title: "Tugas Pertemuan 2"
+author: "Uiwang Nur Thoriq"
+date: "2023-09-10"
+output: html_document
+---
+
+#Memanggil package yang dibutuhkan
+```{r}
+library(rio)
+library(car)
+library(lmtest) #Uji formal
+library(orcutt) #Cochrane-Orcutt
+library(HoRM) #Hildreth-Lu
+```
+
+#Import Data
+
+Data yang digunakan adalah data qualitas air di New Delhi. Peubah respon yang digunakan adalah Air Quality Indeks atau Indeks Kualitas Udara, sedangkan peubah penjelasnya adalah kandungan CO, NO2, O3, SO2, PM10, dan PM25 
+```{r}
+Datatugas2 <- import("https://raw.githubusercontent.com/UiwangNT/Praktikum_MPDW/main/pertemuan%202/data.csv")
+Datatugas2
+```
+
+
+#Eksplorasi Data
+Melakukan eksplorasi untuk melihat sebaran data masing-masing peubah penjelas dengan peubah respon.
+```{r}
+plot(x=Datatugas2$CO, y=Datatugas2$AQI, xlab="CO2", ylab="Air Quality Index")
+
+plot(x=Datatugas2$NO2, y=Datatugas2$AQI, xlab="NO2", ylab="Air Quality Index")
+
+plot(x=Datatugas2$O3, y=Datatugas2$AQI, xlab="O3", ylab="Air Quality Index")
+
+plot(x=Datatugas2$PM10, y=Datatugas2$AQI, xlab="PM10", ylab="Air Quality Index")
+
+plot(x=Datatugas2$PM25, y=Datatugas2$AQI, xlab="PM25", ylab="Air Quality Index")
+
+plot(x=Datatugas2$SO2, y=Datatugas2$AQI, xlab="SO2", ylab="Air Quality Index")
+```
+Berdarkan beberapa plot antara peubah penjelas dan peubah respon, terlihat bahwa beberapa plot menunjukkan hubungan linear antara peubah penjelas dengan peubah respon.
+
+#Regresi
+```{r}
+model<- lm(AQI~CO+NO2+O3+PM10+PM25+SO2,data=Datatugas2)
+summary(model)
+```
+Berdasarkan ringkasan model yang muncul, diperoleh hasil uji F yang memiliki p-value kurang dari 0.05 yang berarti terdapat satu peubah yang berpengaruh nyata terhadap model. Selanjutnya melalui uji t diperoleh hasil bahwa p-value pada NO2, O3, PM10, PM25, dan SO2 yang lebih kecil dari 5% yang berarti peubah penjelas tersebut berpengaruh signifikan terhadap peubah respon (AQI). Pada ringkasan juga dapat dilihat bahwa nilai R^2 yang besar yaitu 99,1% yang berarti keragaman peubah respon atau indeks kualitas udara yang dapat dijelaskan oleh peubah karbon monoksida dan ozon adalah sebesar 99,1%. Selanjutnya akan dilakukan uji asumsi terhadap model yang didapat.
+
+#Multikolinearitas
+```{r}
+vif(model)
+```
+Pada model tidak didapatkan adanya nilai VIF yang lebih besar dari 10, sehingga dapat disimpulkan bahwa tidak ada multikolinearitas antar peubah penjelas.
+
+#Melihat asumsi secara eksploratif
+```{r}
+sisaan<- residuals(model)
+fitted<- predict(model)
+
+#QQ-Plot
+par(mfrow = c(2,2))
+qqnorm(sisaan)
+qqline(sisaan, col = "steelblue", lwd = 2)
+
+#Plot Sisaan vs Fitted Value
+plot(fitted, sisaan, col = "steelblue", pch = 20, xlab = "Sisaan", ylab = "Fitted Values", main = "Sisaan vs Fitted Values")
+abline(a = 0, b = 0, lwd = 2)
+
+#Histogram Sisaan
+hist(sisaan, col = "steelblue")
+
+#Plot Sisaan vs Urutan
+plot(seq(1,nrow(Datatugas2),1), sisaan, col = "steelblue", pch = 20, xlab = "Sisaan", ylab = "Urutan", main = "Sisaan vs Urutan")
+lines(seq(1,nrow(Datatugas2),1), sisaan, col = "red")
+abline(a = 0, b = 0, lwd = 2)
+```
+
+QQ-plot menunjukkan bahwa sisaan menunjukkan pola yang simetris dengan ujung-ujung menebal. Pada histogram juga tidak menunjukkan bahwa sisaan cenderung menyebar normal. Pada plot Fitted Values vs Sisaan dan Sisaan vs Urutan menunjukkan tidak adanya pola pada sisaan, yang berarti tidak ada autokolerasi. Selanjutnya akan dilakukan pengujian asumsi dengan uji formaL, plot ACF dan PACF.
+
+#Melihat sisaan menyebar normal atau tidak
+```{r}
+shapiro.test(sisaan)
+ks.test(sisaan, "pnorm", mean=mean(sisaan), sd=sd(sisaan))
+```
+Berdasarkan hasil uji yang dilakukan dengan uji Shapiro-Wilk dan Kolmogorov-Smirnov, didapatkan nilai p-value yang lebih besar dari 0,05 pada kedua uji. Maka dapat disimpulkan bahwa sisaan menyebar normal.
+
+#Melihat adanya autokolerasi atau tidak
+```{r}
+#Plot ACF dan PACF
+par(mfrow = c(1,2))
+acf(sisaan)
+pacf(sisaan)
+
+#Uji Durbin-Watson
+dwtest(model)
+```
+Pada plot ACF dan PACF tidak terdeteksi adanya autokolerasi. Kemudian pada uji Durbin-Watson juga menunjukkan nilai p-value yang lebih besar dari 0,05. Maka dapat disimpulkan bahwa tidak terdapat autokolerasi pada sisaan.
+
+
+
+Karena tidak ada autokolerasi pada sisaan, maka akan dilakukan pemodelan dengan beberapa peubah saja.
+
+
+## Pemodelan dengan 4 peubah penjelas
+# Pemodelan
+```{r}
+modelbaru<- lm(AQI~CO+O3+SO2+PM25,data=Datatugas2)
+summary(modelbaru)
+vif(modelbaru)
+```
+Berdasarkan ringkasan model yang muncul, diperoleh hasil uji F yang memiliki p-value kurang dari 0.05 yang berarti terdapat satu peubah yang berpengaruh nyata terhadap model. Selanjutnya melalui uji t diperoleh hasil bahwa p-value pada O3, SO2, dan PM25 yang lebih kecil dari 5% yang berarti peubah penjelas tersebut berpengaruh signifikan terhadap peubah respon (AQI). Pada ringkasan juga dapat dilihat bahwa nilai R^2 yang besar yaitu 98,89% yang berarti keragaman peubah respon atau indeks kualitas udara yang dapat dijelaskan oleh peubah karbon monoksida dan ozon adalah sebesar 98,89%. Selanjutnya akan dilakukan uji asumsi terhadap model yang didapat. Pada pendeteksian multikolinearitas juga tidak menunjukkan nilai VIF>10, sehingga dapat disimpulkan tidak ada multikolinearitas.
+
+```{r}
+sisaan1<- residuals(modelbaru)
+fitted1<- predict(modelbaru)
+
+#QQ-Plot
+par(mfrow = c(2,2))
+qqnorm(sisaan1)
+qqline(sisaan1, col = "steelblue", lwd = 2)
+
+#Plot Sisaan vs Fitted Value
+plot(fitted1, sisaan1, col = "steelblue", pch = 20, xlab = "Sisaan", ylab = "Fitted Values", main = "Sisaan vs Fitted Values")
+abline(a = 0, b = 0, lwd = 2)
+
+#Histogram Sisaan
+hist(sisaan1, col = "steelblue")
+
+#Plot Sisaan vs Urutan
+plot(seq(1,nrow(Datatugas2),1), sisaan1, col = "steelblue", pch = 20, xlab = "Sisaan", ylab = "Urutan", main = "Sisaan vs Urutan")
+lines(seq(1,nrow(Datatugas2),1), sisaan1, col = "red")
+abline(a = 0, b = 0, lwd = 2)
+```
+QQ-plot menunjukkan bahwa sisaan menunjukkan pola yang menyebar normal. Namun pada histogram tidak menunjukkan bahwa sisaan cenderung menyebar normal. Pada plot Fitted Values vs Sisaan dan Sisaan vs Urutan menunjukkan tidak adanya pola pada sisaan, yang berarti tidak ada autokolerasi. Selanjutnya akan dilakukan pengujian asumsi dengan uji formaL, plot ACF dan PACF.
+
+#Uji Normalitas sisaan
+```{r}
+shapiro.test(sisaan1)
+ks.test(sisaan1, "pnorm", mean=mean(sisaan1), sd=sd(sisaan1))
+```
+Berdasarkan uji Shapiro-Wilk dan Kolmogrov-Smirnov, diperoleh nilai p-value yang lebih kecil dari 0,05. Maka dapat disimpulkan bahwa sisaan menyebar normal.
+
+
+#Pendeteksian Autokolerasi
+```{r}
+#Plot ACF dan PACF
+par(mfrow = c(1,2))
+acf(sisaan1)
+pacf(sisaan1)
+
+#Uji Durbin-Watson
+dwtest(modelbaru)
+```
+Pada plot ACF dan PACF tidak terdeteksi adanya autokolerasi. Kemudian pada uji Durbin-Watson menunjukkan nilai p-value yang lebih kecil dari 0,05. Maka dapat disimpulkan bahwa terdapat autokolerasi pada sisaan.
+
+#Penanganan dengan metode Cochrane Orcutt
+```{r}
+modelCO<-cochrane.orcutt(modelbaru)
+modelCO
+
+du<-1.7366
+du
+batas<-4-du
+batas
+
+rho<- modelCO$rho
+rho
+```
+Setelah dilakukan penanganan menggunakan Cochrane-orcutt, diperoleh nilai dw sebesar 2,2036 yang berada di antara 1,7366 dan 2,2634. Dari nilai dw tersebut dapat disimpulkan bahwa setelah melalui penanganan dengan Cochrane-orcutt, sudah tidak terdapat autokorelasi pada sisaan. Hal ini juga didukung dengan nilai p-value yang > 0,05. Diperoleh juga niai rho optimum sebesar 0,1994957.
+
+#Transformasi Manual
+```{r}
+AQI<-Datatugas2$AQI
+CO<-Datatugas2$CO
+O3<-Datatugas2$O3
+PM25<-Datatugas2$PM25
+SO2<-Datatugas2$SO2
+
+AQI.t<- AQI[-1]-AQI[-72]*rho
+CO.t<- CO[-1]-CO[-72]*rho
+O3.t<- O3[-1]-O3[-72]*rho
+PM25.t<- PM25[-1]-PM25[-72]*rho
+SO2.t<- SO2[-1]-SO2[-72]*rho
+modelCOmanual<- lm(AQI.t ~ CO.t+O3.t+PM25.t+SO2.t)
+summary(modelCOmanual)
+```
+#Mencari Penduga Koefisien Regresi setelah Transformasi ke Persamaan Awal
+```{r}
+b0.bt <- modelCOmanual$coefficients[-c(2:5)]
+b0 <- b0.bt/(1-rho)
+b1 <- modelCOmanual$coefficients[-c(1,3:5)]
+b2 <- modelCOmanual$coefficients[-c(1:2,4:5)]
+b3 <- modelCOmanual$coefficients[-c(1:3,5)]
+b4 <- modelCOmanual$coefficients[-c(1:4)]
+b0
+b1
+b2
+b3
+b4
+```
+
+Hasil yang diperoleh dari transformasi manual sama dengan hasil Cochrane orcutt menggunakan package.
+
+# Penanganan dengan Metode Hildreth-Lu
+```{r}
+#Penanganan Autokorelasi Hildreth lu
+# Hildreth-Lu
+hildreth.lu.func<- function(r, model){
+  x1 <- model.matrix(model)[,2]
+  x2 <- model.matrix(model)[,3]
+  x3 <- model.matrix(model)[,4]
+  x4 <- model.matrix(model)[,5]
+  y <- model.response(model.frame(model))
+  n <- length(y)
+  t <- 2:n
+  y <- y[t]-r*y[t-1]
+  x1 <- x1[t]-r*x1[t-1]
+  x2 <- x2[t]-r*x2[t-1]
+  x3 <- x3[t]-r*x3[t-1]
+  x4 <- x4[t]-r*x4[t-1]
+  
+  return(lm(y~x1+x2+x3+x4))
+}
+
+#Pencariab rho yang meminimumkan SSE
+r <- c(seq(0.1,0.9, by= 0.1))
+tab <- data.frame("rho" = r, "SSE" = sapply(r, function(i){deviance(hildreth.lu.func(i, modelbaru))}))
+round(tab, 4)
+```
+Nilai SSE minimum ketika rho bernilai 0,2. Selanjutnya akan dilakukan pencarian rho optimum dengan ketelitian yang lebih baik.
+
+# Mencari Rho Optimal
+```{r}
+#Rho optimal
+rOpt <- seq(0.1,0.3, by= 0.001)
+tabOpt <- data.frame("rho" = rOpt, "SSE" = sapply(rOpt, function(i){deviance(hildreth.lu.func(i, modelbaru))}))
+head(tabOpt[order(tabOpt$SSE),])
+
+#Grafik SSE
+par(mfrow = c(1,1))
+plot(tab$SSE ~ tab$rho , type = "l", xlab = "Rho", ylab = "SSE")
+abline(v = tabOpt[tabOpt$SSE==min(tabOpt$SSE),"rho"], lty = 2, col="red",lwd=2)
+text(x=0.199, y=6.716770, labels = "rho=0.199", cex = 0.8)
+```
+Setelah dilakukan pencarian terhadap nilai rho optimal, diperoleh nilai rho optimal sebesar 0,199 yaitu ketika nilai SSE menghasilkan nilai terkecil sebesar 6,715770.
+
+#Model Terbaik dengan Hidreth Lu
+```{r}
+modelHL <- hildreth.lu.func(0.199, modelbaru)
+summary(modelHL)
+
+#Transformasi Balik
+cat("y = ", coef(modelHL)[1]/(1-0.199), "+", coef(modelHL)[2],"x1","+",coef(modelHL)[3],"x2",coef(modelHL)[4],"x3","+", coef(modelHL)[5],"x4", sep = "")
+```
+Setelah dilakukan transformasi kembali, didapatkan model seperti berikut:
+y = -4.386236+0.01834287x1+0.4725026x2-5.84895x3+0.9879594x4
+
+# Deteksi Autokorelasi kembali
+```{r}
+dwtest(modelHL)
+```
+Penanganan autokorelasi dengan Hidreth Lu menghasilkan nilai p-value sebesar 0,659 yang lebih besar dari 0,05. Maka dapat disimmpulkan bahwa sudah tidak ada autokorelasi.
+
+#Perbandingan
+```{r}
+sseModelawal <- anova(modelbaru)$`Sum Sq`[5]
+sseModelCO <- anova(modelCOmanual)$`Sum Sq`[5]
+sseModelHL <- anova(modelHL)$`Sum Sq`[5]
+mseModelawal <- sseModelawal/length(AQI)
+mseModelCO <- sseModelCO/length(AQI)
+mseModelHL <- sseModelHL/length(AQI)
+akurasi <- matrix(c(sseModelawal,sseModelCO,sseModelHL,
+                    mseModelawal,mseModelCO,mseModelHL),nrow=2,ncol=3,byrow = T)
+colnames(akurasi) <- c("Model Awal", "Model Cochrane-Orcutt", "Model Hildreth-Lu")
+row.names(akurasi) <- c("SSE","MSE")
+akurasi
+```
+Dari perbandingan akurasi didapatkan nilai SSE pada penanganan dengan Cochrane-Orcutt lebih kecil daripada SSE dengan Hidreth-Lu. Namun keduanya tidak berbeda jauh dan keduanya menghasilkan nilai SSE yang lebih kecil dari model awal.
+
+#Simpulan
+Pada pemodelan peubah respon AQI dengan peubah penjelas CO,O3,SO2,dan PM25 terdeteksi adanya autokorelasi sehingga perlu penanganan untuk autokorelasi. Dari 2 penanganan yang dilakukan, SSE pada Cochrane-Orcutt lebih kecil daripada SSE dengan Hidreth-Lu. Namun keduanya tidak berbeda jauh dan keduanya menghasilkan nilai SSE yang lebih kecil dari model awal.
+
 
