@@ -1,1 +1,267 @@
+---
+title: "Tugas Pertemuan 3"
+author: "Uiwang Nur Thoriq"
+date: "2023-09-10"
+output: html_document
+---
 
+# Pemanggilan library dan import data
+Peubah penjelas yang digunakan adalah PM25 dan peubah responnya Air Quality Indeks (AQI)
+```{r}
+library(dLagM)
+library(dynlm)
+library(MLmetrics)
+library(lmtest)
+library(car)
+library(rio)
+dataprt3<-import("https://raw.githubusercontent.com/UiwangNT/Praktikum_MPDW/main/pertemuan%203/dataprt3.csv")
+dataprt3
+```
+
+#Split data menjadi data train dan data test dan membuatnya menjadi data time series
+```{r}
+nrow(dataprt3)
+latih<-dataprt3[1:58,]
+uji<-dataprt3[59:72,]
+latih.ts<-ts(latih)
+latih.ts
+uji.ts<-ts(uji)
+uji.ts
+dataprt3.ts<-ts(dataprt3)
+dataprt3.ts
+```
+
+#Pemodelan dengan model Koyck
+```{r}
+model.koyck <- koyckDlm(x = latih$PM25, y = latih$AQI)
+summary(model.koyck)
+AIC(model.koyck)
+BIC(model.koyck)
+
+```
+Berdasarkan hasil pemodelan didapatkan bahwa pada intercept, $x_t$ dan $y_{t-1}$ memiliki p-value yang < 0.05. Maka dapat disimpulkan bahwa intercept, $x_t$ dan $y_{t-1}$ berpengaruh signifikan terhadap $y_t$ dengan taraf 5%.
+
+$$
+\hat{Y_t}=4.0771-0.5723X_t+0.8897Y_{t-1}
+$$
+
+#Peramalan dan akurasi dengan metode Koyck
+Melakukan peramalan sebanyak 14 periode dan menghitung akurasi data latih
+```{r}
+peramalan.koyck <- forecast(model = model.koyck,x = uji$PM25, h=14)
+peramalan.koyck
+mape.koyck <- MAPE(peramalan.koyck$forecasts, uji$AQI)
+
+#akurasi data latih
+GoF(model.koyck)
+```
+Pada hasil akurasi didapatkan nilai MAPE sebesar 0.02589331 < 10% yang berarti model yang dihasilkan dengan metode Koyck sudah baik.
+
+
+#Regresi dengan Distributed Lag
+Pertama akan dilakukan uji coba (memilih lag bebas)
+
+#Pemodelan dengan lag=4
+```{r}
+model.dist.lag <- dlm(x = latih$PM25,y = latih$AQI , q = 4)
+summary(model.dist.lag)
+AIC(model.dist.lag)
+BIC(model.dist.lag)
+
+```
+Berdasarkan hasil pemodelan, diperoleh nilai p-value pada intercept dan $x_t$ yang < 0.05. Maka dapat disimpulkan bahwa intercept dan peubah $x_t$ berpengaruh signifikan terhadap $y_t$
+
+$$
+\hat{Y_t}=37.9512-12.2936X_t+7.3378X_{t-1}+0.4926X_{t-2}+1.2347X_{t-3}-2.0250X_{t-4}
+$$
+#Peramalan dan Akurasi dengan distributed lag
+Dilakukan peramalan untuk 14 periode
+```{r}
+ramal.dist.lag <- forecast(model = model.dist.lag, x=uji$PM25, h=14)
+ramal.dist.lag
+mape.dist.lag <- MAPE(ramal.dist.lag$forecasts, uji$AQI)
+
+#akurasi data training
+GoF(model.dist.lag)
+```
+Pada hasil akurasi didapatkan nilai MAPE sebesar 0.04184784 < 10% yang berarti model yang dihasilkan dengan metode Koyck sangat baik.
+
+
+# Mencari nilai lag optimum
+```{r}
+finiteDLMauto(formula = AQI ~ PM25,
+              data = data.frame(latih), q.min = 1,q.max = 27,
+              model.type = "dlm", error.type = "AIC", trace = FALSE)
+```
+Diperoleh nilai lag optimum yaitu 27 ketika nilai AIC = -48.7592
+
+# Pemodelan dengan lag =27
+
+```{r}
+model.dist.lag2 <- dlm(x = latih$PM25,y = latih$AQI , q = 27)
+summary(model.dist.lag2)
+AIC(model.dist.lag2)
+BIC(model.dist.lag2)
+```
+Berdasarkan hasil pemodelan, diperoleh nilai p-value pada $x_t$ dan $x_{t-27}$ < 0.05. Maka dapat disimpulkan bahwa peubah $x_t$ dan $x_{t-27}$ berpengaruh signifikan terhadap $y$
+
+#Peramalan dan akurasi dengan distributed lag optimum
+Meramal sebanyak 14 periode
+```{r}
+#peramalan dan akurasi
+ramal.dist.lag2 <- forecast(model = model.dist.lag2, x=uji$PM25, h=14)
+mape.dist.lag2<- MAPE(ramal.dist.lag2$forecasts, uji$AQI)
+#akurasi data training
+GoF(model.dist.lag2)
+```
+Dari peramalan diperoleh nilai MAPE yang sangat kecil yaitu 0.0011775	 < 10%. Maka dapat dikatakan pemodelan sangat baik.
+
+# Pemodelan dengan Autoregressive
+```{r}
+model.ardl <- ardlDlm(x = latih$PM25, y = latih$AQI, p = 1 , q = 1)
+summary(model.ardl)
+AIC(model.ardl)
+BIC(model.ardl)
+```
+Hasil pemodelan dengan ARDL menunjukkan bahwa p-value pada $y_{t-1}$ < 0.05. Maka dapat disimpulkan bahwa $y_{t-1}$ berpengaruh signifikan terhadap $y_t$.
+
+$$
+\hat{Y}=4.00535-0.52588X_t-0.03046X_{t-1}+0.89112Y_{t-1}
+$$
+#Peramalan dan akurasi dengan ARDL
+Meramal dengan ARDL sebanyak 14 periode
+```{r}
+ramal.ardl <- forecast(model = model.ardl, x=uji$PM25, h=14)
+ramal.ardl
+mape.ardl <- MAPE(ramal.ardl$forecasts, uji$AQI)
+mape.ardl
+
+#akurasi data latih
+GoF(model.ardl)
+```
+Berdasarkan perhitungan akurasi terlihat bahwa nilai MAPE keduanya tidak jauh berbeda, yaitu 0.1064417 dengan 0.02587044. Artinya, model regresi dengan distribusi lag ini tidak overfitted atau underfitted.
+
+#Menentukan lag optimum
+```{r}
+model.ardl.opt <- ardlBoundOrders(data = data.frame(dataprt3), ic = "AIC", 
+                                  formula = AQI ~ PM25 )
+min_p=c()
+for(i in 1:6){
+  min_p[i]=min(model.ardl.opt$Stat.table[[i]])
+}
+q_opt=which(min_p==min(min_p, na.rm = TRUE))
+p_opt=which(model.ardl.opt$Stat.table[[q_opt]] == 
+              min(model.ardl.opt$Stat.table[[q_opt]], na.rm = TRUE))
+data.frame("q_optimum" = q_opt, "p_optimum" = p_opt, 
+           "AIC"=model.ardl.opt$min.Stat)
+```
+Dari hasil tersebut dapat terlihat bahwa nilai AIC terendah didapat ketika $p=15$ dan $q=5$, yaitu sebesar `124.7089`. Artinya, model autoregressive optimum didapat ketika $p=6$ dan $q=1$.
+
+#Pemodelan dengan p dan q optimum
+```{r}
+model.ardl2 <- ardlDlm(x = latih$PM25, y = latih$AQI, p = 15 , q = 5)
+summary(model.ardl2)
+AIC(model.ardl2)
+BIC(model.ardl2)
+```
+Hasil pemodelan dengan ARDL p dan q optimum menunjukkan bahwa p-value pada $x_t$, $y_{t-1}$ dan $y_{t-2}$ < 0.05. Maka dapat disimpulkan bahwa $x_t$, $y_{t-1}$ dan $y_{t-2}$ berpengaruh signifikan terhadap $y_t$.
+
+# Peramalan dan akurasi ARDL optimum
+Peramalan sebanyak 14 periode
+```{r}
+ramal.ardl2 <- forecast(model = model.ardl2, x=uji$PM25, h=14)
+ramal.ardl2
+mape.ardl2 <- MAPE(ramal.ardl2$forecasts, uji$AQI)
+mape.ardl2
+
+#akurasi data latih
+GoF(model.ardl2)
+```
+Berdasarkan perhitungan akurasi terlihat bahwa nilai MAPE keduanya cukup jauh berbeda, yaitu 0.3929756 dengan 0.01187065. Namun keduanya < 10%.
+
+# Pemodelan DLM & ARDL dengan Library `dynlm` sebagai contoh
+```{r}
+#sama dengan model dlm q=1
+cons_lm1 <- dynlm(AQI ~ PM25+L(PM25),data = latih.ts)
+#sama dengan model ardl p=1 q=0
+cons_lm2 <- dynlm(AQI ~ PM25+L(AQI),data = latih.ts)
+#sama dengan ardl p=1 q=1
+cons_lm3 <- dynlm(AQI ~ PM25+L(PM25)+L(AQI),data = latih.ts)
+#sama dengan dlm p=2
+cons_lm4 <- dynlm(AQI ~ PM25+L(PM25)+L(PM25,2),data = latih.ts)
+
+#Ringkasan model
+summary(cons_lm1)
+summary(cons_lm2)
+summary(cons_lm3)
+summary(cons_lm4)
+```
+# SSE
+```{r}
+deviance(cons_lm1)
+deviance(cons_lm2)
+deviance(cons_lm3)
+deviance(cons_lm4)
+```
+#Uji Diagnostik
+```{r}
+#uji model
+if(require("lmtest")) encomptest(cons_lm1, cons_lm2)
+```
+#Autokolerasi
+```{r}
+dwtest(cons_lm1)
+dwtest(cons_lm2)
+dwtest(cons_lm3)
+dwtest(cons_lm4)
+```
+Pada keempat model terdapat autokorelasi
+
+#Heterogenitas
+```{r}
+bptest(cons_lm1)
+bptest(cons_lm2)
+bptest(cons_lm3)
+bptest(cons_lm4)
+```
+Ragam pada model 1 dan 4 heterogen
+
+#Kenormalan
+```{r}
+shapiro.test(residuals(cons_lm1))
+shapiro.test(residuals(cons_lm2))
+shapiro.test(residuals(cons_lm3))
+shapiro.test(residuals(cons_lm4))
+```
+Semua model menyebar normal
+
+
+# Perbandingan Model
+Melakukan perbandingan nilai MAPE dari model-model yang telah dibuat di atas tadi (yang bukan contoh dengan Library `dynlm`)
+```{r}
+akurasi <- matrix(c(mape.koyck, mape.dist.lag, mape.dist.lag2, mape.ardl, mape.ardl2))
+row.names(akurasi)<- c("Koyck","DLM 1","DLM 2","Autoregressive","Autoregressive 2")
+colnames(akurasi) <- c("MAPE")
+akurasi
+```
+Berdasarkan beberapa nilai MAPE dari metode-metode yang telah dicobakan, model paling optimum didapat pada Model Koyck karena memiliki nilai MAPE yang terkecil yaitu sebesar `0.1054825`.
+
+#Plot
+```{r}
+plot(uji$PM25, uji$AQI, type="b", col="black")
+points(uji$PM25, peramalan.koyck$forecasts,col="red")
+lines(uji$PM25, peramalan.koyck$forecasts,col="red")
+plot(uji$PM25, uji$AQI, type="b", col="black")
+points(uji$PM25, ramal.dist.lag$forecasts,col="blue")
+lines(uji$PM25, ramal.dist.lag$forecasts,col="blue")
+plot(uji$PM25, uji$AQI, type="b", col="black")
+points(uji$PM25, ramal.dist.lag2$forecasts,col="orange")
+lines(uji$PM25, ramal.dist.lag2$forecasts,col="orange")
+plot(uji$PM25, uji$AQI, type="b", col="black")
+points(uji$PM25, ramal.ardl$forecasts,col="green")
+lines(uji$PM25, ramal.ardl$forecasts,col="green")
+plot(uji$PM25, uji$AQI, type="b", col="black")
+points(uji$PM25, ramal.ardl2$forecasts,col="purple")
+lines(uji$PM25, ramal.ardl2$forecasts,col="purple")
+```
+Berdasarkan plot tersebut, cukup sulit untuk menentukan plot mana yang paling mendekati data aktualnya. Dari kelima permalan, metode Koyck lah yang lebih cenderung mendekati pola pada aktualnya, meski sebenarnya cukup berbeda. Oleh karena itu, dapat disimpulkan model terbaik dalam hal ini adalah model regresi dengan metode Koyck.
