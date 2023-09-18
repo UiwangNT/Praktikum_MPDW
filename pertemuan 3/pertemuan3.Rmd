@@ -1,7 +1,7 @@
 ---
 title: "Tugas Pertemuan 3"
 author: "Uiwang Nur Thoriq"
-date: "2023-09-10"
+date: "2023-09-18"
 output: html_document
 ---
 
