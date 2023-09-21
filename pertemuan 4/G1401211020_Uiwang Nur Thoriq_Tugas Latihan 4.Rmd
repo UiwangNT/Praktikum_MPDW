@@ -5,7 +5,7 @@ date: "2023-09-21"
 output: html_document
 ---
 
-### White Noise
+### Pembangkitan White Noise
 ```{r}
 set.seed(020)
 wn <- rnorm(300)
@@ -99,7 +99,7 @@ plot(y=yt_ma3,x=yt_3_ma)
 ```
 Berdasarkan scatter plot terlihat antara $Y_t$ dengan $Y_{t-3}$ cenderung tidak ada hubungan
 
-##AutoKorelasi
+## AutoKorelasi
 Hitung autokorelasi masing masing baik dari data bangkitan maupun secara teoritis
 ```{r}
 cor(yt_ma,yt_1_ma)
@@ -204,7 +204,7 @@ plot(y=yt_ar3,x=yt_3_ar)
 ```
 Berdasarkan scatter plot terlihat antara $Y_t$ dengan $Y_{t-3}$ cenderung tidak ada hubungan.
 
-##AutoKorelasi
+## AutoKorelasi
 Hitung autokorelasi masing masing baik dari data bangkitan maupun secara teoritis
 ```{r}
 cor(yt_ar,yt_1_ar)
@@ -321,7 +321,7 @@ plot(y=yt_arma3,x=yt_3_arma)
 ```
 Berdasarkan scatter plot terlihat antara $Y_t$ dengan $Y_{t-3}$ cenderung tidak ada hubungan.
 
-##Autokorelasi
+## Autokorelasi
 Hitung autokorelasi masing masing baik dari data bangkitan maupun secara teoritis
 ```{r}
 cor(yt_arma,yt_1_arma)
