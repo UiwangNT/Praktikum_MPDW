@@ -24,6 +24,7 @@ plot <- datampdw.ts |> as_tsibble() |>
   xlab("Obs") + ylab("Nilai")
 plot
 mean(datampdw.ts)
+var(datampdw.ts)
 ```
 Berdasarkan plot time series, sangat jelas bahwa data tidak stasioner baik pada ragam maupun rataan. Data memiliki pola trend.
 
