@@ -79,7 +79,7 @@ Data cenderung *tails off* dengan pola yang turun perlahan.
 ```{r}
 tseries::adf.test(part.1)
 ```
-Berdasarkan uji ADF, didapat *p-value* sebesar 0.03132 < 5% sehingga menandakan bahwa data stasioner dalam rataan. Hal ini berbeda dengan secara eksploratif.
+Berdasarkan uji ADF, didapat *p-value* sebesar 0.03132 < 5% sehingga menandakan bahwa data stasioner dalam rataan.
 
 ### Plot Boxcox Data Partisi 1
 ```{r}
