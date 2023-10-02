@@ -1,1 +1,140 @@
+---
+title: "Praktikum Pertemuan 5"
+author: "Uiwang Nur Thoriq"
+date: "2023-09-21"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(tsibble)
+library(tseries)
+library(MASS)
+library(rio)
+
+datampdw <- import("https://raw.githubusercontent.com/UiwangNT/Praktikum_MPDW/main/data/US_inflation_rates_csv.csv")
+datampdw.ts<-ts(datampdw[,3])
+datampdw.ts
+```
+
+## Plot Time Series Data Penuh
+```{r}
+plot <- datampdw.ts |> as_tsibble() |> 
+  ggplot(aes(x = index, y = value)) + geom_line() + theme_bw() +
+  xlab("Obs") + ylab("Nilai")
+plot
+mean(datampdw.ts)
+```
+Berdasarkan plot time series, sangat jelas bahwa data tidak stasioner baik pada ragam maupun rataan. Data memiliki pola trend.
+
+## Plot ACF Data Penuh
+```{r}
+acf(datampdw.ts)
+```
+Berdasarkan plot ACF terlihat bahwa data cenderung *tails off* dan turun perlahan.
+
+## Uji ADF Data Penuh
+```{r}
+tseries::adf.test(datampdw.ts)
+```
+Didapatkan nilai $p_{value}$ sebesar 0.9261 > 0.05. Maka dapat disimpulkan bahwa data tidak stasioner pada rataan.
+
+## Plot Boxcox Data Penuh
+```{r}
+index <- seq(1:length(datampdw.ts))
+bc = boxcox(datampdw.ts~index, lambda = seq(-2,2,by=0.01))
+
+lambda <- bc$x[which.max(bc$y)]
+lambda
+
+bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
+```
+Pada box-cox didapatkan nilai $\lambda$ optimum sebesar *0.36* dan pada selang kepercayaan 95% nilai memiliki batas bawah *0.32* dan batas atas *0.39*. Selang tidak memuat nilai 1. Maka dapat disimpulkan data tidak stasioner dalam ragam.
+
+## Partisi 1
+```{r}
+part.1 <- datampdw.ts[1:250] |> ts()
+part.1
+```
+
+### Plot Time Series Data Partisi 1
+```{r}
+mean(part.1)
+var(part.1)
+part.1 |> as_tsibble() |> 
+  ggplot(aes(x = index, y = value)) +
+  geom_line() + theme_bw() +
+  xlab("Obs") + ylab("Nilai")
+```
+Berdasarkan plot time series, data partisi satu tidak stasioner pada rataan maupun ragam.
+
+### Plot ACF Data Partisi 1
+```{r}
+acf(part.1)
+```
+Data cenderung *tails off* dengan pola yang turun perlahan.
+
+### Uji ADF Data Partisi 1
+```{r}
+tseries::adf.test(part.1)
+```
+Berdasarkan uji ADF, didapat *p-value* sebesar 0.03132 < 5% sehingga menandakan bahwa data stasioner dalam rataan.
+
+### Plot Boxcox Data Partisi 1
+```{r}
+index <- seq(1:length(part.1))
+bc = boxcox(part.1~index, lambda = seq(-6,6,by=0.01))
+
+lambda <- bc$x[which.max(bc$y)]
+lambda
+
+bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
+```
+Pada box-cox didapatkan nilai $\lambda$ optimum sebesar *2.07* dan pada selang kepercayaan 95% nilai memiliki batas bawah *1.76* dan batas atas *2.38*. Selang tidak memuat nilai 1. Maka dapat disimpulkan data tidak stasioner dalam ragam.
+
+## Partisi 2
+```{r}
+part.2 <- datampdw.ts[1:500] |> ts()
+part.2
+```
+### Plot Time Series Data Partisi 2
+```{r}
+mean(part.2)
+var(part.2)
+part.2 |> as_tsibble() |> 
+  ggplot(aes(x = index, y = value)) +
+  geom_line() + theme_bw() +
+  xlab("Obs") + ylab("Nilai")
+```
+Berdasarkan plot time series, data partisi dua tidak stasioner pada rataan maupun ragam.
+
+### Plot ACF Data Partisi 2
+```{r}
+acf(part.2)
+```
+Data cenderung *tails off* dengan pola yang turun perlahan.
+
+### Uji ADF Data Partisi 2
+```{r}
+tseries::adf.test(part.2)
+```
+Berdasarkan uji ADF, didapat *p-value* sebesar 0.9851 > 5% sehingga menandakan bahwa data tidak stasioner dalam rataan.
+
+### Plot Boxcox Data Partisi 2
+```{r}
+index <- seq(1:length(part.2))
+bc = boxcox(part.2~index, lambda = seq(-2,0,by=0.01))
+
+lambda <- bc$x[which.max(bc$y)]
+lambda
+
+bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
+```
+Pada box-cox didapatkan nilai $\lambda$ optimum sebesar *-1.51* dan pada selang kepercayaan 95% nilai memiliki batas bawah *-1.57* dan batas atas *-1.44*. Selang tidak memuat nilai 1. Maka dapat disimpulkan data tidak stasioner dalam ragam.
+
+
+
+
+
+
 
